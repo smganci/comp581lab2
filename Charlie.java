@@ -36,10 +36,11 @@ public class Charlie {
 		this.motorM= new EV3MediumRegulatedMotor(MotorPort.A);
 		this.touchSensorL=new EV3TouchSensor(SensorPort.S1);
 		this.touchSensorR=new EV3TouchSensor(SensorPort.S4);
-		this.sonicSensor=new EV3UltrasonicSensor(SensorPort.S2);
+		this.sonicSensor=new EV3UltrasonicSensor(SensorPort.S3);
 		
 		this.touchL=this.touchSensorL.getTouchMode();
 		this.touchR = this.touchSensorR.getTouchMode();
+		this.sonic= (SensorMode) this.sonicSensor.getDistanceMode();
 		this.radiusL=.028;
 		this.radiusR=.028;
 	}
@@ -146,6 +147,10 @@ public class Charlie {
 		this.motorL.synchronizeWith(new EV3LargeRegulatedMotor[] {this.motorR });
 	}
 	
+	public void stopSync() {
+		this.motorL.endSynchronization();
+	}
+	
 	/*Name: moveForwardTime
 	 * in: time to move in seconds
 	 * out: nothing 
@@ -246,6 +251,7 @@ public class Charlie {
 				//move away
 			}
 			
+			
 			if(sonic>.2) {
 				//move closer
 			}
@@ -270,8 +276,8 @@ public class Charlie {
 	 * should rotate sonic sensor to certain angle relative to robot
 	 * 
 	 * */
-	public void rotateSonic(int degrees, boolean stop) {
-		this.motorM.rotateTo(degrees, stop);
+	public void rotateSonic(int degrees) {
+		this.motorM.rotate(degrees);
 	}
 	
 	/*Name: sonicSense
@@ -314,21 +320,23 @@ public class Charlie {
 	 * description: should turn the robot in place towards goal
 	 * */
 	
-	public void rotateRight(int degrees) {
+	public void rotateRight(long degrees) {
 		//need to set velocities to be opposites
 		//need to turn for a specific ammount of time
 		//need to stop
-		float speed=0;
+		float av=180;////////////////////need to decide on a reasonable speed
 		
 		//set speed
-		this.setBothSpeed(speed);
+		this.setBothSpeed(av);
 		
 		//move right forward and left backward to create a spin
-		this.motorR.forward();
-		this.motorL.backward();
+		this.stopSync();
+		this.motorL.forward();
+//		this.motorL.backward();
 		
 		
-		long delay= 0; // need to set delay time
+//		long delay= (long) (degrees/av)*1000; // need to set delay time
+		long delay =500;
 		Delay.msDelay(delay);
 		
 		
@@ -349,6 +357,15 @@ public class Charlie {
 		//need to stop
 	}
 	
+//	/*Name: moveTimeSpin
+//	 * in: omega in degrees, theta in degrees
+//	 * out: seconds to move
+//	 * */
+//	
+//	public long moveTimeSpin(long omega, long theta) {
+//		long time= theta/omeg;
+//	}
+//	
 	
 	
 	

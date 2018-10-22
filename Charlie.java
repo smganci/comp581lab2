@@ -308,25 +308,42 @@ public class Charlie {
 	
 	
 	
-	/*Name: turnRight
+	/*Name: rotateRight
 	 * in: degrees to rotate
 	 * out: nothing
 	 * description: should turn the robot in place towards goal
 	 * */
 	
-	public void turnRight(int degrees) {
+	public void rotateRight(int degrees) {
 		//need to set velocities to be opposites
 		//need to turn for a specific ammount of time
 		//need to stop
+		float speed=0;
+		
+		//set speed
+		this.setBothSpeed(speed);
+		
+		//move right forward and left backward to create a spin
+		this.motorR.forward();
+		this.motorL.backward();
+		
+		
+		long delay= 0; // need to set delay time
+		Delay.msDelay(delay);
+		
+		
+		//stop both motors
+		this.stopBothInstant();
+		
 	}
 	
-	/*Name: turnLeft
+	/*Name: rotateLeft
 	 * in: degrees to rotate
 	 * out: nothing
 	 * description: should turn the robot in place towards goal
 	 * */
 	
-	public void turnLeft(int degrees) {
+	public void rotateLeft(int degrees) {
 		//need to set velocities to be opposites
 		//need to turn for a specific ammount of time
 		//need to stop

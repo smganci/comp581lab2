@@ -14,12 +14,16 @@ public class Lab2 {
 		charlie.rotateSonic(90, true );
 		
 		//turn robot right
+		charlie.rotateRight(90);
 		
 		//follow wall
+		charlie.traceWall();
 		
 		//turn robot left
+		charlie.rotateLeft(90);
 		
 		//move forward distance till goal
+		charlie.moveForwardDist(0.7);
 	}
 
 }

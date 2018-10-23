@@ -9,6 +9,7 @@ import lejos.hardware.motor.EV3LargeRegulatedMotor;
 import lejos.hardware.motor.EV3MediumRegulatedMotor;
 import lejos.hardware.port.MotorPort;
 import lejos.hardware.port.SensorPort;
+import lejos.hardware.sensor.EV3GyroSensor;
 import lejos.hardware.sensor.EV3TouchSensor;
 import lejos.hardware.sensor.EV3UltrasonicSensor;
 import lejos.hardware.sensor.SensorMode;
@@ -22,13 +23,17 @@ public class Charlie {
 	private EV3TouchSensor touchSensorL;
 	private EV3TouchSensor touchSensorR;
 	private EV3UltrasonicSensor sonicSensor;
+	private EV3GyroSensor gyroSensor;
 	private double radiusL;
 	private double radiusR;
+	private double L;
+	private double heading;
 
 	//sensor modes
 	private SensorMode touchL;
 	private SensorMode touchR;
 	private SensorMode sonic;
+	private SensorMode gyro;
 	
 	public Charlie() {
 		this.motorL= new EV3LargeRegulatedMotor(MotorPort.B);
@@ -37,12 +42,16 @@ public class Charlie {
 		this.touchSensorL=new EV3TouchSensor(SensorPort.S1);
 		this.touchSensorR=new EV3TouchSensor(SensorPort.S4);
 		this.sonicSensor=new EV3UltrasonicSensor(SensorPort.S3);
+		this.gyroSensor = new EV3GyroSensor(SensorPort.S2);
 		
 		this.touchL=this.touchSensorL.getTouchMode();
 		this.touchR = this.touchSensorR.getTouchMode();
 		this.sonic= (SensorMode) this.sonicSensor.getDistanceMode();
+		this.gyro = (SensorMode) this.gyroSensor.getAngleMode();
 		this.radiusL=.028;
 		this.radiusR=.028;
+		this.L=.12;
+		this.heading = 0;
 	}
 	
 	/*Name: setLeftSpeed
@@ -202,7 +211,7 @@ public class Charlie {
 	 * description: moves robot backward a certain distance
 	 **/
 	public void moveBackwardDist(double d) {
-		//w=(ul+ur)/2
+		//w=(ul+ur)/2 => I don't think that's true? v=(vl+vr)/2
 		float w= (this.motorL.getSpeed()+this.motorR.getSpeed())/2;
 		long sec =this.moveTime(w, d);
 		this.moveBackwardTime(sec);
@@ -240,33 +249,74 @@ public class Charlie {
 	 * */
 	
 	public void traceWall() {
-		float sonic=sonicSense();
+		float sonic = sonicSense();
+		
+		float bs = 270;
+		this.setBothSpeed(bs);
+		
+		this.syncMotors();
+		this.moveForwardBoth();
 		
 		//basically we want to stop once we sense that the wall has ended
 		//may need to alter while statement
-		while(sonic <.5) {
+		while(sonic < .5) {
 			
 			//if the sonic is too close, need to adjust to move toward a point further away
+			if (sonic >= Float.POSITIVE_INFINITY) {
+				sonic=sonicSense();
+			}
 			if(sonic<.1) {
 				//move away
+				float ls = 360;
+				this.setLeftSpeed(ls);
+				this.setRightSpeed(bs);
+				long time = this.timeToRotate(bs, ls, 45);
+				long startTime = System.currentTimeMillis(); //fetch starting time
+				while((System.currentTimeMillis()-startTime)<time)
+				{
+					float newSonic= sonicSense();
+					if (newSonic > .15) {
+						break;
+					}
+				}
+//				Delay.msDelay(time);
+				this.setLeftSpeed(bs);
+//				this.heading += 45;
+				System.out.println("Else-if 1");
 			}
-			
 			
 			if(sonic>.2) {
 				//move closer
+				float rs = 360;
+				this.setRightSpeed(rs);
+				this.setLeftSpeed(bs);
+				long time = this.timeToRotate(rs, bs, 45);
+				long startTime = System.currentTimeMillis(); //fetch starting time
+				while((System.currentTimeMillis()-startTime)<time)
+				{
+					float newSonic= sonicSense();
+					if (newSonic < .15) {
+						break;
+					}
+				}				this.setRightSpeed(bs);
+//				this.heading -= 45;
+				System.out.println("Else-if 2");
 			}
 			
-			
 			sonic=sonicSense();
-			if(sonic >.4) {
+			if(sonic >.3) {
 				sonic=sonicSense();
 				//
-				float amt=0;
+				double amt= 0.5;
 				if(sonic>amt) {
+					System.out.println("The current sensed value is: "+ sonic);
 					break;
 				}
 			}
+			System.out.println("End loop");
+
 		}
+		this.stopBothInstant();
 	}
 	
 	/*Name: rotateSonic
@@ -277,6 +327,7 @@ public class Charlie {
 	 * 
 	 * */
 	public void rotateSonic(int degrees) {
+		this.motorM.setSpeed(90);
 		this.motorM.rotate(degrees);
 	}
 	
@@ -321,27 +372,20 @@ public class Charlie {
 	 * */
 	
 	public void rotateRight(long degrees) {
-		//need to set velocities to be opposites
-		//need to turn for a specific ammount of time
-		//need to stop
-		float av=180;////////////////////need to decide on a reasonable speed
-		
-		//set speed
-		this.setBothSpeed(av);
-		
 		//move right forward and left backward to create a spin
 		this.stopSync();
 		this.motorL.forward();
-//		this.motorL.backward();
+//		this.motorR.backward();
 		
 		
 //		long delay= (long) (degrees/av)*1000; // need to set delay time
-		long delay =500;
+		this.setLeftSpeed(180);
+		long delay = this.timeToRotate(0 , 180, degrees);
 		Delay.msDelay(delay);
-		
 		
 		//stop both motors
 		this.stopBothInstant();
+		this.heading += degrees;
 		
 	}
 	
@@ -352,20 +396,38 @@ public class Charlie {
 	 * */
 	
 	public void rotateLeft(int degrees) {
-		//need to set velocities to be opposites
-		//need to turn for a specific ammount of time
-		//need to stop
+		
+		//move right forward and left backward to create a spin
+		this.stopSync();
+		this.motorR.forward();
+		
+		this.setRightSpeed(180);
+		long delay = this.timeToRotate(180, 0, degrees);
+		Delay.msDelay(delay);
+				
+		//stop both motors
+		this.stopBothInstant();
+		this.heading -= degrees;
 	}
 	
-//	/*Name: moveTimeSpin
-//	 * in: omega in degrees, theta in degrees
+	public float theta() {
+		float[] sample_gyro = new float[sonic.sampleSize()];
+		this.gyro.fetchSample(sample_gyro, 0);
+		return sample_gyro[0];
+	}
+	
+//	/*Name: timeToRotate
+//	 * in: ul, ur, theta
 //	 * out: seconds to move
 //	 * */
 //	
-//	public long moveTimeSpin(long omega, long theta) {
-//		long time= theta/omeg;
-//	}
-//	
+	public long timeToRotate(double ur, double ul, double theta) {
+		double vr = ur * Math.PI/180 * this.radiusR;
+		double vl = ul * Math.PI/180 * this.radiusL;
+		double omega = (vl-vr)/this.L;
+		double time = (theta * Math.PI/180)/omega;
+		return (long) time*1000;
+	}
 	
 	
 	
